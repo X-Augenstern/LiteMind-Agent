@@ -1,0 +1,45 @@
+﻿spring:
+  application:
+    name: xz-ai-agent
+  profiles:
+    active: local  # 激活名为 local 的配置文件 profile，从而加载 application-local.yml 或 application-local.properties 文件中的配置，后加载的会覆盖前面的相同 key
+  ai:
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        model: gemma3:1b
+    mcp:
+      client:
+        # stdio:
+        #   servers-configuration: classpath:mcp-servers.json
+        sse:
+          connections:
+            server1:
+              url: http://localhost:8127
+
+server:
+  port: 8123
+  servlet:
+    context-path: /api  # 路径前缀，所有后端api接口、文档资源都要以/api打头
+
+# springdoc-openapi 接口文档配置，访问：http://localhost:8123/api/doc.html
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+  group-configs:
+    - group: 'default'  # 默认组名
+      paths-to-match: '/**'  # 匹配所有路径，把所有路径的接口都识别为接口文档
+      packages-to-scan: com.xz.xzaiagent.controller  # 扫描包名
+# knife4j的增强配置，不需要增强可以不配
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+#logging:
+#  level:
+#    org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor: debug  # 指定SimpleLoggerAdvisor类的日志输出级别 >= debug

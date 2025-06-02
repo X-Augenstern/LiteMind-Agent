@@ -1,0 +1,11 @@
+spring:
+  ai:
+    mcp:
+      server:
+        name: xz-image-search-mcp-server
+        version: 0.0.1
+        type: SYNC
+        stdio: true
+  main:
+    web-application-type: none  # 本地传输，所以不需要 Web 项目（关闭 web 支持）
+    banner-mode: off  # 是否要在项目启动时输出 banner 信息，最好关掉，因为 stdio 是基于标准的输入输出来传递信息，要保障在项目过程中不要使用 sout、打印控制台信息，可能会干扰本地项目交互

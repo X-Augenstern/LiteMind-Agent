@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: xz-image-search-mcp-server
+  profiles:
+    # active: stdio
+    active: sse
+server:
+  port: 8127
