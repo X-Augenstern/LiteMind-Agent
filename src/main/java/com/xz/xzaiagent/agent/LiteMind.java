@@ -17,7 +17,7 @@ public class LiteMind extends ToolCallAgent{
         this.setName("LiteMind");
         this.setSystemPrompt(com.xz.xzaiagent.agent.prompt.LiteMind.SYSTEM_PROMPT);
         this.setNextStepPrompt(com.xz.xzaiagent.agent.prompt.LiteMind.NEXT_STEP_PROMPT);
-        this.setMaxSteps(20);
+        this.setMaxSteps(10);
 
         // 初始化 AI 对话客户端
         ChatClient chatClient = ChatClient.builder(dashscopeChatModel)
