@@ -2,20 +2,21 @@
   application:
     name: xz-ai-agent
   profiles:
-    active: local  # 激活名为 local 的配置文件 profile，从而加载 application-local.yml 或 application-local.properties 文件中的配置，后加载的会覆盖前面的相同 key
+    active: prod  # 激活名为 local 的配置文件 profile，从而加载 application-local.yml 或 application-local.properties 文件中的配置，后加载的会覆盖前面的相同 key
   ai:
     ollama:
       base-url: http://localhost:11434
       chat:
         model: gemma3:1b
-    mcp:
-      client:
+    # 临时注释 MCP，便于部署
+    # mcp:
+      # client:
         # stdio:
         #   servers-configuration: classpath:mcp-servers.json
-        sse:
-          connections:
-            server1:
-              url: http://localhost:8127
+        # sse:
+        #   connections:
+        #     server1:
+        #       url: http://localhost:8127
 
 server:
   port: 8123
