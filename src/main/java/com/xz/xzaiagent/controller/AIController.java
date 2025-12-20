@@ -26,6 +26,9 @@ public class AIController {
     @Resource
     private ChatModel dashscopeChatModel;
 
+    @Resource
+    private com.xz.xzaiagent.app.SimpleChat simpleChat;
+
     /**
      * 同步调用
      */
@@ -81,9 +84,28 @@ public class AIController {
     }
 
     /**
-     * SSE 流式调用 LiteMind
+     * SSE 流式调用 LLM（简单对话模式）
+     * 与 /liteMind/chat 的区别：
+     * - 此接口：单次思考，直接回答，适合简单对话
+     * - /liteMind/chat：深度思考，多轮思考-行动循环，适合复杂任务
+     *
+     * @param message 用户消息
+     * @param chatId  对话ID（用于多轮对话记忆，可选，默认为"default"）
+     * @return SSE流式响应
      */
-    @GetMapping("/liteMind/chat")
+    @GetMapping("/chat/simple")
+    public SseEmitter doSimpleChat(String message, String chatId) {
+        // 如果没有提供chatId，使用默认值
+        if (chatId == null || chatId.trim().isEmpty()) {
+            chatId = "default";
+        }
+        return simpleChat.doChatByStream(message, chatId);
+    }
+
+    /**
+     * SSE 流式调用 LiteMind（深度思考模式）
+     */
+    @GetMapping("/chat/liteMind")
     public SseEmitter doChatWithLiteMind(String message) {
         // 不能使用自动注入，因为这是一个单例，每次使用必须 new 一个新的，防止各个用户调用同一个 LiteMind 造成阻塞
         LiteMind liteMind = new LiteMind(allTools, dashscopeChatModel);
