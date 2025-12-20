@@ -24,7 +24,7 @@ public class ToolRegistration {
         ResourceDownloadTool resourceDownloadTool = new ResourceDownloadTool();
         PDFGenerationTool pdfGenerationTool = new PDFGenerationTool();
         TerminateTool terminateTool = new TerminateTool();
-        AskHumanTool askHumanTool = new AskHumanTool();
+        // AskHumanTool askHumanTool = new AskHumanTool();
         return ToolCallbacks.from(  // filter(toolMethod -> toolMethod.isAnnotationPresent(Tool.class)) 会去识别 @Tool 注解为 AI 可调用的工具
                 fileOperationTool,
                 webSearchTool,
@@ -32,8 +32,8 @@ public class ToolRegistration {
                 terminalOperationTool,
                 resourceDownloadTool,
                 pdfGenerationTool,
-                terminateTool,
-                askHumanTool
+                terminateTool
+                // askHumanTool 先不主动询问用户
         );
     }
 }
