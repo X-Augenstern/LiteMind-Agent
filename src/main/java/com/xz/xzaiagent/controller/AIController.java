@@ -1,19 +1,26 @@
 package com.xz.xzaiagent.controller;
 
+import com.xz.xzaiagent.agent.ActiveAgentRegistry;
 import com.xz.xzaiagent.agent.LiteMind;
 import com.xz.xzaiagent.app.LoveApp;
+import com.xz.xzaiagent.app.SimpleChat;
+import com.xz.xzaiagent.utils.IdUtil;
 import jakarta.annotation.Resource;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.ServerSentEvent;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.springframework.http.HttpStatus.NOT_FOUND;
+
 
 @RestController
 @RequestMapping("/ai")
@@ -27,7 +34,11 @@ public class AIController {
     private ChatModel dashscopeChatModel;
 
     @Resource
-    private com.xz.xzaiagent.app.SimpleChat simpleChat;
+    private SimpleChat simpleChat;
+
+    @Resource
+    private ActiveAgentRegistry activeAgentRegistry;
+
 
     /**
      * 同步调用
@@ -90,25 +101,76 @@ public class AIController {
      * - /liteMind/chat：深度思考，多轮思考-行动循环，适合复杂任务
      *
      * @param message 用户消息
-     * @param chatId  对话ID（用于多轮对话记忆，可选，默认为"default"）
+     * @param chatId  对话ID（用于多轮对话记忆）
      * @return SSE流式响应
      */
     @GetMapping("/chat/simple")
     public SseEmitter doSimpleChat(String message, String chatId) {
-        // 如果没有提供chatId，使用默认值
-        if (chatId == null || chatId.trim().isEmpty()) {
-            chatId = "default";
+        String finalChatId = IdUtil.validate_or_generate_chatId(chatId);
+
+        // register placeholder so terminate can be called even before stream is fully established
+        activeAgentRegistry.register(finalChatId, null, null, null);
+
+        // forward chatId upstream so Agent uses it as conversation id
+        SseEmitter sse = simpleChat.doChatByStream(message, finalChatId);
+
+        // send initial chatId info to client
+        try {
+            sse.send("__CHAT_ID__:" + finalChatId);
+        } catch (IOException ignored) {
         }
-        return simpleChat.doChatByStream(message, chatId);
+
+        // registry will be updated by SimpleChat when disposable is available
+        return sse;
     }
 
     /**
      * SSE 流式调用 LiteMind（深度思考模式）
      */
     @GetMapping("/chat/liteMind")
-    public SseEmitter doChatWithLiteMind(String message) {
-        // 不能使用自动注入，因为这是一个单例，每次使用必须 new 一个新的，防止各个用户调用同一个 LiteMind 造成阻塞
+    public SseEmitter doChatWithLiteMind(String message, String chatId) {
+        String finalChatId = IdUtil.validate_or_generate_chatId(chatId);
+
+        // register placeholder so terminate can be called even before Agent registers
+        activeAgentRegistry.register(finalChatId, null, null, null);
+
+        // create new LiteMind instance and start stream, forwarding chatId upstream
         LiteMind liteMind = new LiteMind(allTools, dashscopeChatModel);
-        return liteMind.runByStream(message);
+        // inform agent of requested chatId for internal registration
+        liteMind.setRequestedChatId(finalChatId);
+        liteMind.setActiveAgentRegistry(activeAgentRegistry);
+        SseEmitter sse = liteMind.runByStream(message);
+
+        // send initial chatId info to client
+        try {
+            sse.send("__CHAT_ID__:" + finalChatId);
+        } catch (IOException ignored) {
+        }
+
+        // register actual agent entry (override placeholder)
+        activeAgentRegistry.register(finalChatId, liteMind, sse, null);
+        return sse;
+    }
+
+    /**
+     * 外部终止接口：根据 chatId 终止正在运行的 Agent / SSE 流
+     */
+    @PostMapping("/chat/terminate")
+    public ResponseEntity<java.util.Map<String, Object>> terminateChat(
+            @RequestParam("chatId") String chatId,
+            @RequestParam(name = "final", required = false, defaultValue = "false") boolean hard
+    ) {
+        boolean ok = activeAgentRegistry.terminate(chatId, hard);
+        Map<String, Object> body = new HashMap<>();
+        body.put("chatId", chatId);
+        if (ok) {
+            body.put("ok", true);
+            body.put("result", "terminated");
+            return ResponseEntity.ok(body);
+        } else {
+            body.put("ok", false);
+            body.put("result", "not_found");
+            return ResponseEntity.status(NOT_FOUND).body(body);
+        }
     }
 }

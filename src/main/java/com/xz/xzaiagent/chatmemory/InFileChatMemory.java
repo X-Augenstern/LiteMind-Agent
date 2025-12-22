@@ -1,6 +1,7 @@
 package com.xz.xzaiagent.chatmemory;
 
 import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.KryoException;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import org.objenesis.strategy.StdInstantiatorStrategy;
@@ -8,6 +9,9 @@ import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.messages.Message;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -83,8 +87,23 @@ public class InFileChatMemory implements ChatMemory {
             // try-with-resources 语法，要求资源对象实现了 AutoCloseable 接口，在使用完后自动关闭，无需手动调用 close()，防止资源泄露
             try (Input input = new Input(new FileInputStream(file))) {
                 messages = kryo.readObject(input, ArrayList.class);  // 反序列化，从文件中读取对象
+            } catch (KryoException ke) {
+                // 文件可能已损坏或不是 Kryo 格式，备份并返回空的会话
+                System.err.println("Kryo deserialization error for conversation " + conversationId + ": " + ke.getMessage());
+                try {
+                    File bad = new File(file.getAbsolutePath() + ".corrupt." + System.currentTimeMillis());
+                    file.renameTo(bad);
+                    System.err.println("Backed up corrupted conversation file to: " + bad.getAbsolutePath());
+                } catch (Exception ex) {
+                    System.err.println("Failed to backup corrupted conversation file: " + ex.getMessage());
+                }
+                messages = new ArrayList<>();
             } catch (IOException e) {
                 e.printStackTrace();
+            } catch (Exception e) {
+                // 其它异常也处理为空会话，避免影响主流程
+                System.err.println("Unexpected error reading conversation file " + conversationId + ": " + e.getMessage());
+                messages = new ArrayList<>();
             }
         }
         return messages;
@@ -95,10 +114,39 @@ public class InFileChatMemory implements ChatMemory {
      */
     private void saveConversation(String conversationId, List<Message> messages) {
         File file = getConversationFile(conversationId);
-        try (Output output = new Output(new FileOutputStream(file))) {
-            kryo.writeObject(output, messages);  // 把 messages 对象序列化成二进制数据，并写入到 output 中，以便后续可以保存或传输
+        // write to temp file first, then atomically move to target to avoid partial writes
+        File tmp = new File(file.getAbsolutePath() + ".tmp");
+        try (Output output = new Output(new FileOutputStream(tmp))) {
+            kryo.writeObject(output, messages);
+            output.flush();
         } catch (IOException e) {
             e.printStackTrace();
+            // cleanup tmp on failure
+            try {
+                if (tmp.exists()) tmp.delete();
+            } catch (Exception ignored) {
+            }
+            return;
+        }
+
+        try {
+            Path tmpPath = tmp.toPath();
+            Path targetPath = file.toPath();
+            try {
+                Files.move(tmpPath, targetPath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (IOException atomicEx) {
+                // Fallback without ATOMIC_MOVE if not supported
+                Files.move(tmpPath, targetPath, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (Exception e) {
+            // If move fails, attempt simple rename as last resort
+            try {
+                if (!tmp.renameTo(file)) {
+                    throw new IOException("Failed to move temp conversation file to target");
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
         }
     }
 }

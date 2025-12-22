@@ -2,6 +2,7 @@ package com.xz.xzaiagent.app;
 
 import com.xz.xzaiagent.advisor.MyLoggerAdvisor;
 import com.xz.xzaiagent.chatmemory.InFileChatMemory;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
@@ -10,6 +11,8 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
+import reactor.core.Disposable;
+
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
@@ -25,6 +28,9 @@ import static org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvis
 public class SimpleChat {
 
     private final ChatClient chatClient;
+
+    @Resource
+    private com.xz.xzaiagent.agent.ActiveAgentRegistry activeAgentRegistry;
 
     private static final String SYSTEM_PROMPT = "你是一个深耕医疗领域多年的专家，能够回答用户的各种关于医疗方面的问题。";
 
@@ -67,8 +73,8 @@ public class SimpleChat {
                         .stream()
                         .content();
 
-                // 订阅流式数据并发送给客户端
-                contentFlux.subscribe(
+                // 订阅流式数据并发送给客户端，保存Disposable以便外部可中止
+                Disposable disposable = contentFlux.subscribe(
                         chunk -> {
                             try {
                                 if (chunk != null && !chunk.isEmpty()) {
@@ -86,6 +92,9 @@ public class SimpleChat {
                                 sseEmitter.complete();
                             } catch (IOException e) {
                                 sseEmitter.completeWithError(e);
+                            } finally {
+                                // 清理注册: provided chatId
+                                if (chatId != null) activeAgentRegistry.unregister(chatId);
                             }
                         },
                         () -> {
@@ -95,9 +104,16 @@ public class SimpleChat {
                                 sseEmitter.complete();
                             } catch (IOException e) {
                                 sseEmitter.completeWithError(e);
+                            } finally {
+                                if (chatId != null) activeAgentRegistry.unregister(chatId);
                             }
                         }
                 );
+
+                // store disposable and register provided chatId mapping
+                if (chatId != null) {
+                    activeAgentRegistry.register(chatId, null, sseEmitter, disposable);
+                }
             } catch (Exception e) {
                 log.error("处理对话请求失败", e);
                 try {
