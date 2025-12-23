@@ -1,6 +1,7 @@
 package com.xz.xzaiagent.app;
 
 import com.xz.xzaiagent.advisor.MyLoggerAdvisor;
+import com.xz.xzaiagent.agent.ActiveAgentRegistry;
 import com.xz.xzaiagent.chatmemory.InFileChatMemory;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ import reactor.core.Disposable;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
+import static com.xz.xzaiagent.agent.prompt.LiteMind.SIMPLE_CHAT_SYSTEM_PROMPT_ZH;
 import static org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvisor.CHAT_MEMORY_CONVERSATION_ID_KEY;
 import static org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvisor.CHAT_MEMORY_RETRIEVE_SIZE_KEY;
 
@@ -30,9 +32,7 @@ public class SimpleChat {
     private final ChatClient chatClient;
 
     @Resource
-    private com.xz.xzaiagent.agent.ActiveAgentRegistry activeAgentRegistry;
-
-    private static final String SYSTEM_PROMPT = "你是一个深耕医疗领域多年的专家，能够回答用户的各种关于医疗方面的问题。";
+    private ActiveAgentRegistry activeAgentRegistry;
 
     /**
      * 初始化简单对话客户端
@@ -43,7 +43,7 @@ public class SimpleChat {
         ChatMemory chatMemory = new InFileChatMemory(fileDir);
 
         chatClient = ChatClient.builder(dashscopeChatModel)
-                .defaultSystem(SYSTEM_PROMPT)
+                .defaultSystem(SIMPLE_CHAT_SYSTEM_PROMPT_ZH)
                 .defaultAdvisors(
                         new MessageChatMemoryAdvisor(chatMemory),
                         new MyLoggerAdvisor()
