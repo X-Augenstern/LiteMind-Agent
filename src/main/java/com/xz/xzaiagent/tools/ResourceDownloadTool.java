@@ -13,17 +13,24 @@ import java.io.File;
  */
 public class ResourceDownloadTool {
 
-    @Tool(description = "Download a response from a given URL")
-    public String downloadResource(@ToolParam(description = "URL of the resource to download") String url,
-                                   @ToolParam(description = "Name of the file to save the download resource") String fileName) {
+    @Tool(description = "从指定 URL 下载资源并保存为文件")
+    public String downloadResource(@ToolParam(description = "要下载资源的 URL") String url,
+                                   @ToolParam(description = "保存的文件名") String fileName) {
         String fileDir = FileConstant.FILE_SAVE_DIR + "/download";
         String filePath = fileDir + "/" + fileName;
         try {
             FileUtil.mkdir(fileDir);  // 创建目录
             HttpUtil.downloadFile(url, new File(filePath));
-            return "Resource download successfully to: " + filePath;
+            return "资源已下载并保存：" + filePath;
         } catch (Exception e) {
-            return "Error downloading resource: " + e.getMessage();
+            return "下载资源失败：" + e.getMessage();
         }
     }
 }
+
+// EN
+// Download a response from a given URL
+// URL of the resource to download
+// Name of the file to save the download resource
+// Resource download successfully to:
+// Error downloading resource:

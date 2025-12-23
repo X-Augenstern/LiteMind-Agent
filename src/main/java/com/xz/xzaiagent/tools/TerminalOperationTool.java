@@ -12,8 +12,8 @@ import java.io.InputStreamReader;
  */
 public class TerminalOperationTool {
 
-    @Tool(description = "Execute a command in the terminal")
-    public String executeTerminalCommand(@ToolParam(description = "Command to execute in the terminal") String command) {
+    @Tool(description = "在宿主机终端执行命令（请注意权限与安全）")
+    public String executeTerminalCommand(@ToolParam(description = "要在终端执行的命令") String command) {
         StringBuilder sb = new StringBuilder();
         try {
             ProcessBuilder pb = new ProcessBuilder("cmd.exe", "/c", command);
@@ -30,10 +30,16 @@ public class TerminalOperationTool {
             }
             int exitCode = process.waitFor();  // 等待命令执行完成
             if (exitCode != 0)
-                sb.append("Command execution failed with exit code: ").append(exitCode);
+                sb.append("命令执行失败，退出码：").append(exitCode);
         } catch (IOException | InterruptedException e) {
-            sb.append("Error executing command: ").append(e.getMessage());
+            sb.append("执行命令时出错：").append(e.getMessage());
         }
         return sb.toString();
     }
 }
+
+// EN
+// Execute a command in the terminal
+// Command to execute in the terminal
+// Command execution failed with exit code:
+// Error executing command:

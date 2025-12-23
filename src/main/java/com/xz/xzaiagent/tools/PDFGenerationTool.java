@@ -16,9 +16,9 @@ import org.springframework.ai.tool.annotation.ToolParam;
  */
 public class PDFGenerationTool {
 
-    @Tool(description = "Generate a PDF file with given content")
-    public String generatePDF(@ToolParam(description = "Name of the file to save the generate PDF") String fileName,
-                              @ToolParam(description = "Content to be included in the PDF") String content) {
+    @Tool(description = "根据内容生成 PDF 文件并保存")
+    public String generatePDF(@ToolParam(description = "要保存的 PDF 文件名") String fileName,
+                              @ToolParam(description = "要写入 PDF 的内容") String content) {
         String fileDir = FileConstant.FILE_SAVE_DIR + "/pdf";
         String filePath = fileDir + "/" + fileName;
         try {
@@ -45,9 +45,16 @@ public class PDFGenerationTool {
                 // 修改段落并关闭文档
                 document.add(paragraph);
             }
-            return "PDF generated successfully to: " + filePath;
+            return "PDF 已生成并保存：" + filePath;
         } catch (Exception e) {
-            return "Error generating PDF: " + e.getMessage();
+            return "生成 PDF 失败：" + e.getMessage();
         }
     }
 }
+
+// EN
+// Generate a PDF file with given content
+// Name of the file to save the generate PDF
+// Content to be included in the PDF
+// PDF generated successfully to:
+// Error generating PDF:

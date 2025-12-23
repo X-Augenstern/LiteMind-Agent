@@ -12,27 +12,37 @@ public class FileOperationTool {
 
     private final String FILE_DIR = FileConstant.FILE_SAVE_DIR + "/file";
 
-    @Tool(description = "Read content from a file")
-    public String readFile(@ToolParam(description = "Name of a file to read") String fileName) {
+    @Tool(description = "从文件中读取内容")
+    public String readFile(@ToolParam(description = "要读取的文件名") String fileName) {
         String filePath = FILE_DIR + "/" + fileName;
         try {
             return FileUtil.readUtf8String(filePath);
         } catch (Exception e) {
-            return "Error reading file: " + e.getMessage();
+            return "读取文件出错：" + e.getMessage();
         }
     }
 
-    @Tool(description = "Write content to file")
-    public String writeFile(@ToolParam(description = "Name of the file to write") String fileName,
-                            @ToolParam(description = "Content to write to the file") String content) {
+    @Tool(description = "把内容写入文件")
+    public String writeFile(@ToolParam(description = "要写入的文件名") String fileName,
+                            @ToolParam(description = "要写入的内容") String content) {
         String filePath = FILE_DIR + "/" + fileName;
         try {
             // 创建目录
             FileUtil.mkdir(FILE_DIR);
             FileUtil.writeUtf8String(content, filePath);
-            return "File written successfully to: " + filePath;
+            return "文件已成功保存：" + filePath;
         } catch (Exception e) {
-            return "Error writing to file: " + e.getMessage();
+            return "写入文件出错：" + e.getMessage();
         }
     }
 }
+
+// EN
+// Read content from a file
+// Name of a file to read
+// Error reading file:
+// Write content to file
+// Name of the file to write
+// Content to write to the file
+// File written successfully to:
+// Error writing to file:
