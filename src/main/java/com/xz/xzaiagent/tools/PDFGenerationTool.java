@@ -16,7 +16,7 @@ import org.springframework.ai.tool.annotation.ToolParam;
  */
 public class PDFGenerationTool {
 
-    @Tool(description = "根据内容生成 PDF 文件并保存")
+    @Tool(name = "PDF 生成", description = "根据内容生成 PDF 文件并保存")
     public String generatePDF(@ToolParam(description = "要保存的 PDF 文件名") String fileName,
                               @ToolParam(description = "要写入 PDF 的内容") String content) {
         String fileDir = FileConstant.FILE_SAVE_DIR + "/pdf";

@@ -9,7 +9,7 @@ public class AskHumanTool {
 
     private final Scanner scanner = new Scanner(System.in);
 
-    @Tool(description = "使用此工具请求人工协助")
+    @Tool(name = "人工协助", description = "使用此工具请求人工协助")
     public String askHuman(@ToolParam(description = "要询问人工的问题") String inquire) {
         System.out.println("请求人工协助: " + inquire + "\n\n回复请在此输入：");
         return scanner.nextLine().trim();

@@ -13,7 +13,7 @@ import java.io.File;
  */
 public class ResourceDownloadTool {
 
-    @Tool(description = "从指定 URL 下载资源并保存为文件")
+    @Tool(name = "资源下载", description = "从指定 URL 下载资源并保存为文件")
     public String downloadResource(@ToolParam(description = "要下载资源的 URL") String url,
                                    @ToolParam(description = "保存的文件名") String fileName) {
         String fileDir = FileConstant.FILE_SAVE_DIR + "/download";

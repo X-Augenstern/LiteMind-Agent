@@ -37,13 +37,15 @@ public abstract class ReActAgent extends BaseAgent {
         try {
             // 先思考
             boolean shouldAct = think();
-            if (!shouldAct)
-                return "Thinking complete - no action needed";
+            if (!shouldAct) {
+                return "思考完毕，不需要采取任何行动。";
+            }
             // 再行动
             return act();
         } catch (Exception e) {
             // 记录异常日志
-            return "Error executing this step: " + e;
+            log.error("执行当前步骤时出错：", e);
+            return "执行当前步骤时出错：" + e;
         }
     }
 }

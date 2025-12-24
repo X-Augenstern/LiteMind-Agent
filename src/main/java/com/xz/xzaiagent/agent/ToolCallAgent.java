@@ -88,24 +88,26 @@ public class ToolCallAgent extends ReActAgent {
             List<AssistantMessage.ToolCall> toolCallList = assistantMessage.getToolCalls();
             // 输出提示信息
             String res = assistantMessage.getText();
-            log.info(getName() + "'s thoughts: " + res);
-            log.info("{} selected {} tools to use", getName(), toolCallList.size());
+            log.info(getName() + "'在本轮的思考结果为：" + res);
+            log.info("{} 挑选了 {} 个工具来使用", getName(), toolCallList.size());
             String toolCallInfo = toolCallList.stream()
-                    .map(toolCall -> String.format("Tool name: %s, param: %s", toolCall.name(), toolCall.arguments()))
+                    .map(toolCall -> String.format("工具名: %s, 参数: %s", toolCall.name(), toolCall.arguments()))
                     .collect(Collectors.joining("\n"));
             log.info(toolCallInfo);
 
-            if (toolCallList.isEmpty()) {
+            if (toolCallList.isEmpty() || isTaskComplete(res)) {
                 // 如果不需要调用工具，需要单独把助手消息添加到上下文中
                 getMessageList().add(assistantMessage);
+                log.info("任务已完成，将状态置为 FINISHED");
+                setState(AgentState.FINISHED);
                 return false;
             } else
                 // 如果需要调用工具，不需要记入助手消息，在 Act 中才会执行工具，执行工具后才会有结果，这个结果里是包含助手消息的
                 return true;
         } catch (Exception e) {
-            log.error("Oops! The " + getName() + "'s thinking process hit a snag: " + e.getMessage());
+            log.error("！！！{} 在本轮的思考中遇到意外困难：{}", getName(), e.getMessage());
             // 即使抛出异常了也要告诉 AI 错误信息
-            getMessageList().add(new AssistantMessage("Error encountered while processing: " + e.getMessage()));
+            getMessageList().add(new AssistantMessage("在本轮思考中遇到错误：" + e.getMessage()));
             return false;
         }
     }
@@ -113,7 +115,7 @@ public class ToolCallAgent extends ReActAgent {
     @Override
     public String act() {
         if (!this.toolCallChatResponse.hasToolCalls())
-            return "No tools need to be called";
+            return "无需调用工具。";
 
         // 调用工具
         Prompt prompt = new Prompt(getMessageList(), this.getChatOptions());
@@ -125,7 +127,7 @@ public class ToolCallAgent extends ReActAgent {
         // 工具调用结果
         ToolResponseMessage toolResponseMessage = (ToolResponseMessage) CollUtil.getLast(this.getMessageList());
         String res = toolResponseMessage.getResponses().stream()
-                .map(response -> "Tool " + response.name() + " completed its mission! Result: " + response.responseData())
+                .map(response -> "工具" + response.name() + " 已执行！结果是：" + response.responseData())
                 .collect(Collectors.joining("\n"));
         log.info(res);
 
@@ -137,12 +139,35 @@ public class ToolCallAgent extends ReActAgent {
 
     private void handleSpecialTool(ToolResponseMessage tMsg) {
         Optional<ToolResponseMessage.ToolResponse> terminateToolCalled = tMsg.getResponses().stream()
-                .filter(response -> response.name().equals("doTerminate"))
+                .filter(response -> response.name().equals("doTerminate") || response.name().equals("自行终止"))
                 .findFirst();
         if (terminateToolCalled.isPresent()) {
             // 任务结束，更改状态
-            log.info("Special tool {} has completed the task!", terminateToolCalled.get().name());
+            log.info("特殊工具 {} 已完成任务！", terminateToolCalled.get().name());
             setState(AgentState.FINISHED);
         }
+    }
+
+    /**
+     * 判断任务是否已完成
+     * 通过检查LLM的回复内容来判断
+     *
+     * @param llmResponse LLM的回复文本
+     * @return 是否已完成
+     */
+    private boolean isTaskComplete(String llmResponse) {
+        if (StrUtil.isBlank(llmResponse)) {
+            return false;
+        }
+
+        String lowerResponse = llmResponse.toLowerCase();
+
+        // 检查是否包含任务完成的标志性词语
+        return lowerResponse.contains("已完成") ||
+                lowerResponse.contains("完成") && (lowerResponse.contains("任务") || lowerResponse.contains("工作")) ||
+                lowerResponse.contains("finished") ||
+                lowerResponse.contains("complete") && (lowerResponse.contains("task") || lowerResponse.contains("work")) ||
+                lowerResponse.contains("任务结束") ||
+                lowerResponse.contains("done");
     }
 }

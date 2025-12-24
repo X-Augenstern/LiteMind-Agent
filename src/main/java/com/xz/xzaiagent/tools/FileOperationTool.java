@@ -12,7 +12,7 @@ public class FileOperationTool {
 
     private final String FILE_DIR = FileConstant.FILE_SAVE_DIR + "/file";
 
-    @Tool(description = "从文件中读取内容")
+    @Tool(name = "文件读取", description = "从文件中读取内容")
     public String readFile(@ToolParam(description = "要读取的文件名") String fileName) {
         String filePath = FILE_DIR + "/" + fileName;
         try {
@@ -22,7 +22,7 @@ public class FileOperationTool {
         }
     }
 
-    @Tool(description = "把内容写入文件")
+    @Tool(name = "写入文件", description = "把内容写入文件")
     public String writeFile(@ToolParam(description = "要写入的文件名") String fileName,
                             @ToolParam(description = "要写入的内容") String content) {
         String filePath = FILE_DIR + "/" + fileName;

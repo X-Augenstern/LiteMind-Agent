@@ -12,7 +12,7 @@ import java.io.InputStreamReader;
  */
 public class TerminalOperationTool {
 
-    @Tool(description = "在宿主机终端执行命令（请注意权限与安全）")
+    @Tool(name = "终端操作", description = "在宿主机终端执行命令（请注意权限与安全）")
     public String executeTerminalCommand(@ToolParam(description = "要在终端执行的命令") String command) {
         StringBuilder sb = new StringBuilder();
         try {

@@ -6,14 +6,19 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.MessageType;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import jakarta.annotation.Resource;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+
+import static com.xz.xzaiagent.agent.prompt.LiteMind.STUCK_PROMPT_CH;
+
 
 /**
  * 基础代理抽象类，用于管理代理状态和执行流程
@@ -66,6 +71,14 @@ public abstract class BaseAgent {
      * 最多允许代理输出重复消息的次数
      */
     private int duplicateThreshold = 2;
+
+    /**
+     * 当前步骤的用户友好消息（用于SSE流式输出）
+     */
+    // private String currentUserMessage; // 转为从 messageList 中读取 AssistantMessage，避免双重状态管理
+
+    @Resource
+    private ActiveAgentRegistry activeAgentRegistry;
 
     /**
      * 运行代理
@@ -132,12 +145,12 @@ public abstract class BaseAgent {
             // 基础校验
             try {
                 if (this.state != AgentState.IDLE) {
-                    sseEmitter.send("Cannot run agent from state: " + this.state);
+                    safeSend(sseEmitter, "当前状态无法启动智能体: " + this.state);
                     sseEmitter.complete();
                     return;
                 }
                 if (StrUtil.isBlank(userPrompt)) {
-                    sseEmitter.send("Cannot run agent with empty user prompt");
+                    safeSend(sseEmitter, "用户提示词消息内容不能为空，无法启动智能体");
                     sseEmitter.complete();
                     return;
                 }
@@ -154,7 +167,7 @@ public abstract class BaseAgent {
                 // 执行循环
                 while (currentStep < maxSteps && this.state != AgentState.FINISHED) {
                     currentStep++;
-                    log.info("Executing step {}/{}", currentStep, maxSteps);
+                    log.info("当前执行步骤：{}/{}", currentStep, maxSteps);
 
                     // 单步执行
                     String res = step();
@@ -164,22 +177,24 @@ public abstract class BaseAgent {
                         handleStuckState();
 
                     // 输出当前每一步的结果到 SSE，推送给客户端
-                    sseEmitter.send("Step " + currentStep + ": " + res);
+                    if (StrUtil.isNotBlank(res)) {
+                        safeSend(sseEmitter, "步骤" + currentStep + "：" + res);
+                    }
                 }
 
                 if (currentStep >= maxSteps) {
                     currentStep = 0;
                     this.state = AgentState.IDLE;
-                    sseEmitter.send("Terminated: Reached max steps (" + maxSteps + ")");
+                    safeSend(sseEmitter, "已达到最大执行步骤（" + maxSteps + "），任务已终止");
                 }
                 // 正常完成
                 sseEmitter.complete();
             } catch (Exception e) {
                 this.state = AgentState.ERROR;
-                String errMsg = "Error executing agent: " + e;
-                log.error(errMsg);
+                String errMsg = "智能体执行过程中出错：" + e;
+                log.error(errMsg, e);
                 try {
-                    sseEmitter.send(errMsg);
+                    safeSend(sseEmitter, errMsg);
                     sseEmitter.complete();
                 } catch (IOException ex) {
                     sseEmitter.completeWithError(ex);
@@ -193,7 +208,7 @@ public abstract class BaseAgent {
         sseEmitter.onTimeout(() -> {
             this.state = AgentState.ERROR;
             this.cleanUp();
-            log.warn("SSE connection timeout");
+            log.warn("SSE 连接超时。");
         });
 
         // 设置完成回调
@@ -201,10 +216,31 @@ public abstract class BaseAgent {
             if (this.state == AgentState.RUNNING)
                 this.state = AgentState.FINISHED;
             this.cleanUp();
-            log.info("SSE connection completed");
+            log.info("SSE 连接完毕。");
         });
 
         return sseEmitter;
+    }
+
+
+    /**
+     * Helper to send SSE messages and register generated chatId if present.
+     */
+    private void safeSend(SseEmitter emitter, String message) throws IOException {
+        if (message == null) return;
+        if (message.startsWith("__CHAT_ID__:")) {
+            String genId = message.substring("__CHAT_ID__:".length()).trim();
+            if (genId.matches("[0-9a-fA-F]{32}")) {
+                String normalized = genId.toLowerCase();
+                try {
+                    activeAgentRegistry.register(normalized, this, emitter, null);
+                    log.info("已把生成的 chatId {} 注册进 ActiveAgentRegistry", normalized);
+                } catch (Exception e) {
+                    log.warn("注册生成的 chatId 失败 {}", normalized, e);
+                }
+            }
+        }
+        emitter.send(message);
     }
 
     /**
@@ -222,7 +258,7 @@ public abstract class BaseAgent {
         if (messageList.size() < 2)
             return false;
 
-        Message lastMessage = messageList.get(messageList.size() - 1);
+        Message lastMessage = messageList.getLast();
         if (StrUtil.isBlank(lastMessage.getText()))
             return false;
 
@@ -240,9 +276,8 @@ public abstract class BaseAgent {
      * 处理陷入循环的状态
      */
     protected void handleStuckState() {
-        String stuckPrompt = "Observed duplicate responses. Consider new strategies and avoid repeating ineffective paths already attempted";
-        this.nextStepPrompt = stuckPrompt + "\n" + (this.nextStepPrompt != null ? this.nextStepPrompt : "");
-        log.warn("Agent detected stuck state. Added prompt: {}", stuckPrompt);
+        this.nextStepPrompt = STUCK_PROMPT_CH + "\n" + (this.nextStepPrompt != null ? this.nextStepPrompt : "");
+        log.warn("智能体检测到循环状态，补充提示词：{}", STUCK_PROMPT_CH);
     }
 
     /**
