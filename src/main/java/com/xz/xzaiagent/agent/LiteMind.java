@@ -20,6 +20,9 @@ import static com.xz.xzaiagent.agent.prompt.LiteMind.SYSTEM_PROMPT_ZH;
 @Slf4j
 public class LiteMind extends ToolCallAgent {
 
+    // Optional externally provided sessionChatId; if set, agent should use it and register
+    private String requestedChatId;
+
     public LiteMind(ToolCallback[] allTools, ChatModel dashscopeChatModel) {
         super(allTools);
         this.setName("LiteMind");
@@ -34,18 +37,14 @@ public class LiteMind extends ToolCallAgent {
         this.setChatClient(chatClient);
     }
 
-    // Optional externally provided sessionChatId; if set, agent should use it and register
-    private String requestedChatId;
-    private ActiveAgentRegistry activeAgentRegistry;
-
     @Override
     public SseEmitter runByStream(String userPrompt) {
         // Call base implementation to get emitter
         SseEmitter emitter = super.runByStream(userPrompt);
         // If a requestedChatId was provided and registry available, register this agent/emitter
-        if (this.requestedChatId != null && this.activeAgentRegistry != null) {
+        if (this.requestedChatId != null && this.getActiveAgentRegistry() != null) {
             try {
-                this.activeAgentRegistry.register(this.requestedChatId, this, emitter, null);
+                this.getActiveAgentRegistry().register(this.requestedChatId, this, emitter, null);
             } catch (Exception e) {
                 // ignore registration errors but log
                 log.warn("针对 chatId：{}，智能体向 ActiveAgentRegistry 注册失败", this.requestedChatId, e);

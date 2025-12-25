@@ -56,7 +56,7 @@ public abstract class ReActAgent extends BaseAgent {
         } catch (Exception e) {
             // 记录异常日志
             log.error("执行当前步骤时出错：", e);
-            return "执行当前步骤时出错";  // java.lang.IllegalStateException: Conversion from JSON to com.xz.xzaiagent.agent.LiteMind failed
+            return "执行当前步骤时出错";
         }
     }
 }
