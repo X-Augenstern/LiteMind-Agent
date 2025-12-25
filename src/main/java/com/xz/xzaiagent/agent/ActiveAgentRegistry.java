@@ -81,7 +81,12 @@ public class ActiveAgentRegistry {
             map.remove(id);
             if (entry.agent != null) {
                 try {
+                    // set finished state and clear runtime messageList to fully terminate
                     entry.agent.setState(AgentState.FINISHED);
+                    try {
+                        entry.agent.getMessageList().clear();
+                    } catch (Exception ignored) {
+                    }
                 } catch (Exception ignored) {
                 }
             }
