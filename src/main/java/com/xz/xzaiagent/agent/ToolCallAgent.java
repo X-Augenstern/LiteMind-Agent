@@ -22,6 +22,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.jsoup.Jsoup;
+import cn.hutool.json.JSONUtil;
+import cn.hutool.json.JSONArray;
+import cn.hutool.json.JSONObject;
+
+import static com.xz.xzaiagent.constant.TextTruncate.*;
+
 /**
  * 处理工具调用的代理抽象类，具体实现了 think 和 act 方法，可以用作创建实例的父类
  */
@@ -129,25 +136,17 @@ public class ToolCallAgent extends ReActAgent {
         // 工具调用结果
         ToolResponseMessage toolResponseMessage = (ToolResponseMessage) CollUtil.getLast(this.getMessageList());
         String res = toolResponseMessage.getResponses().stream()
-                .map(response -> "工具 " + response.name() + " 已执行！结果是：" + response.responseData())
-                .collect(Collectors.joining("\n"));
+                .map(response -> {
+                    String formatted = formatToolOutput(response.responseData());
+                    return String.format("工具 %s 已执行，结果摘要：\n%s", response.name(), formatted);
+                })
+                .collect(Collectors.joining("\n\n"));
         log.info(res);
 
         // 判断是否调用了终止工具
         handleSpecialTool(toolResponseMessage);
 
         return thinkMsg + "\n" + res;
-    }
-
-    private void handleSpecialTool(ToolResponseMessage tMsg) {
-        Optional<ToolResponseMessage.ToolResponse> terminateToolCalled = tMsg.getResponses().stream()
-                .filter(response -> response.name().equals("doTerminate") || response.name().equals("自行终止"))
-                .findFirst();
-        if (terminateToolCalled.isPresent()) {
-            // 任务结束，更改状态
-            log.info("特殊工具 {} 已完成任务！", terminateToolCalled.get().name());
-            setState(AgentState.FINISHED);
-        }
     }
 
     /**
@@ -171,5 +170,56 @@ public class ToolCallAgent extends ReActAgent {
                 lowerResponse.contains("complete") && (lowerResponse.contains("task") || lowerResponse.contains("work")) ||
                 lowerResponse.contains("任务结束") ||
                 lowerResponse.contains("done");
+    }
+
+    /**
+     * 格式化工具输出，针对 HTML/JSON/长文本做友好预览和截断
+     */
+    private String formatToolOutput(String data) {
+        if (StrUtil.isBlank(data)) return "";
+        String trimmed = data.trim();
+        try {
+            // HTML 内容 -> 提取纯文本预览
+            int max_html_len = MAX_HTML_LEN.getValue();
+            String lower = trimmed.toLowerCase();
+            if (lower.startsWith("<!doctype") || lower.contains("<html") || lower.contains("<body")) {
+                String text = Jsoup.parse(trimmed).text();
+                return text.length() > max_html_len ? text.substring(0, max_html_len) + "...[已截断]" : text;
+            }
+
+            // JSON 内容 -> 美化并截断
+            int max_json_len = MAX_JSON_LEN.getValue();
+            if ((trimmed.startsWith("{") && trimmed.endsWith("}")) || (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
+                try {
+                    if (trimmed.startsWith("{")) {
+                        JSONObject obj = JSONUtil.parseObj(trimmed);
+                        String pretty = obj.toStringPretty();
+                        return pretty.length() > max_json_len ? pretty.substring(0, max_json_len) + "...[已截断]" : pretty;
+                    } else {
+                        JSONArray arr = JSONUtil.parseArray(trimmed);
+                        String pretty = arr.toStringPretty();
+                        return pretty.length() > max_json_len ? pretty.substring(0, max_json_len) + "...[已截断]" : pretty;
+                    }
+                } catch (Exception ignore) {
+                    // 解析失败则继续走默认处理
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
+        // 默认：截断长文本
+        int max_long_text_len = MAX_LONG_TEXT_LEN.getValue();
+        return trimmed.length() > max_long_text_len ? trimmed.substring(0, max_long_text_len) + "...[已截断]" : trimmed;
+    }
+
+    private void handleSpecialTool(ToolResponseMessage tMsg) {
+        Optional<ToolResponseMessage.ToolResponse> terminateToolCalled = tMsg.getResponses().stream()
+                .filter(response -> response.name().equals("doTerminate") || response.name().equals("自行终止"))
+                .findFirst();
+        if (terminateToolCalled.isPresent()) {
+            // 任务结束，更改状态
+            log.info("特殊工具 {} 已完成任务！", terminateToolCalled.get().name());
+            setState(AgentState.FINISHED);
+        }
     }
 }
