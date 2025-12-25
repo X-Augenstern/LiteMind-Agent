@@ -28,7 +28,7 @@ public class WebSearchTool {
         this.apiKey = apiKey;
     }
 
-    @Tool(name = "联网搜索", description = "使用百度搜索引擎检索信息")
+    @Tool(description = "使用百度搜索引擎检索信息")
     public String searchWeb(@ToolParam(description = "搜索关键词") String query) {
         Map<String, Object> paramMap = new HashMap<>();
         paramMap.put("q", query);

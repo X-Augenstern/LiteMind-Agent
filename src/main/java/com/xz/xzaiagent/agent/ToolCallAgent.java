@@ -129,7 +129,7 @@ public class ToolCallAgent extends ReActAgent {
         // 工具调用结果
         ToolResponseMessage toolResponseMessage = (ToolResponseMessage) CollUtil.getLast(this.getMessageList());
         String res = toolResponseMessage.getResponses().stream()
-                .map(response -> "工具" + response.name() + " 已执行！结果是：" + response.responseData())
+                .map(response -> "工具 " + response.name() + " 已执行！结果是：" + response.responseData())
                 .collect(Collectors.joining("\n"));
         log.info(res);
 

@@ -10,7 +10,7 @@ import org.springframework.ai.tool.annotation.ToolParam;
  */
 public class TerminateTool {
 
-    @Tool(name = "自行终止", description = "终止当前交互：当任务完成或无法继续执行任务时，调用此工具以结束工作")
+    @Tool(description = "终止当前交互：当任务完成或无法继续执行任务时，调用此工具以结束工作")
     public String doTerminate(@ToolParam(description = "当前智能体本身") LiteMind agent) {
         agent.setState(AgentState.FINISHED);
         return "交互已完成";
