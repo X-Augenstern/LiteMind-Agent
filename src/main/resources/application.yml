@@ -44,3 +44,14 @@ knife4j:
 #logging:
 #  level:
 #    org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor: debug  # 指定SimpleLoggerAdvisor类的日志输出级别 >= debug
+
+# 应用级配置
+app:
+  chat:
+    memory:
+      # 可配置 ChatMemory 存放路径，默认使用当前工作目录下的 tmp/chat-memory
+      path: ${user.dir}/tmp/chat-memory
+      # 从 ChatMemory 读取历史条数，可通过环境或 profile 覆盖
+      lastN: 50
+      # 从 ChatMemory 检索用于 Prompt 的条数
+      retrieveSize: 20
