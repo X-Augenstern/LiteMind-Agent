@@ -6,7 +6,6 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.MessageType;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -178,7 +177,7 @@ public abstract class BaseAgent {
 
                     // 输出当前每一步的结果到 SSE，推送给客户端
                     if (StrUtil.isNotBlank(res)) {
-                        safeSend(sseEmitter, "步骤" + currentStep + "：" + res);
+                        safeSend(sseEmitter, currentStep > 1 ? "\n" : "" + "【步骤" + currentStep + "】" + res);
                     }
                 }
 

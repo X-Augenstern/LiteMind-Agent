@@ -63,7 +63,7 @@ public class ToolCallAgent extends ReActAgent {
      * @return 是否需要执行行动
      */
     @Override
-    public boolean think() {
+    public ThinkResponse think() {
         // 1、校验提示词，拼接用户提示词
         if (StrUtil.isNotBlank(getNextStepPrompt())) {
             UserMessage userMessage = new UserMessage(getNextStepPrompt());
@@ -93,22 +93,24 @@ public class ToolCallAgent extends ReActAgent {
             String toolCallInfo = toolCallList.stream()
                     .map(toolCall -> String.format("工具名: %s, 参数: %s", toolCall.name(), toolCall.arguments()))
                     .collect(Collectors.joining("\n"));
-            log.info(toolCallInfo);
+            if (StrUtil.isNotBlank(toolCallInfo))
+                log.info(toolCallInfo);
 
             if (toolCallList.isEmpty() || isTaskComplete(res)) {
                 // 如果不需要调用工具，需要单独把助手消息添加到上下文中
                 getMessageList().add(assistantMessage);
                 log.info("任务已完成，将状态置为 FINISHED");
                 setState(AgentState.FINISHED);
-                return false;
+                return new ThinkResponse(false, res);
             } else
                 // 如果需要调用工具，不需要记入助手消息，在 Act 中才会执行工具，执行工具后才会有结果，这个结果里是包含助手消息的
-                return true;
+                return new ThinkResponse(true, null);
         } catch (Exception e) {
-            log.error("！！！{} 在本轮的思考中遇到意外困难：{}", getName(), e.getMessage());
+            log.error("{} 在本轮的思考中遇到意外困难：{}", getName(), e.getMessage());
             // 即使抛出异常了也要告诉 AI 错误信息
-            getMessageList().add(new AssistantMessage("在本轮思考中遇到错误：" + e.getMessage()));
-            return false;
+            String res = "在本轮思考中遇到错误：" + e.getMessage();
+            getMessageList().add(new AssistantMessage(res));
+            return new ThinkResponse(false, res);
         }
     }
 

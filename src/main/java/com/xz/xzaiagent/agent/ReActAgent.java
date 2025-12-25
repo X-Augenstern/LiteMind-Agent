@@ -14,11 +14,19 @@ import lombok.extern.slf4j.Slf4j;
 public abstract class ReActAgent extends BaseAgent {
 
     /**
+     *
+     * @param shouldAct 是否需要执行下一步行动
+     * @param response  本轮思考结果
+     */
+    public record ThinkResponse(boolean shouldAct, String response) {
+    }
+
+    /**
      * 处理当前状态并决定下一步行动
      *
      * @return 是否需要执行下一步行动
      */
-    public abstract boolean think();
+    public abstract ThinkResponse think();
 
     /**
      * 执行决定的行动
@@ -36,16 +44,16 @@ public abstract class ReActAgent extends BaseAgent {
     public String step() {
         try {
             // 先思考
-            boolean shouldAct = think();
-            if (!shouldAct) {
-                return "思考完毕，不需要采取任何行动。";
+            ThinkResponse thinkResponse = think();
+            if (!thinkResponse.shouldAct) {
+                return "思考完毕，不需要采取任何行动：" + thinkResponse.response;
             }
             // 再行动
             return act();
         } catch (Exception e) {
             // 记录异常日志
             log.error("执行当前步骤时出错：", e);
-            return "执行当前步骤时出错：" + e;
+            return "执行当前步骤时出错";  // java.lang.IllegalStateException: Conversion from JSON to com.xz.xzaiagent.agent.LiteMind failed
         }
     }
 }
