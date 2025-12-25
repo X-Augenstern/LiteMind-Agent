@@ -16,9 +16,9 @@ public abstract class ReActAgent extends BaseAgent {
     /**
      *
      * @param shouldAct 是否需要执行下一步行动
-     * @param response  本轮思考结果
+     * @param thinkMsg  本轮思考结果
      */
-    public record ThinkResponse(boolean shouldAct, String response) {
+    public record ThinkResponse(boolean shouldAct, String thinkMsg) {
     }
 
     /**
@@ -33,7 +33,7 @@ public abstract class ReActAgent extends BaseAgent {
      *
      * @return 行动的执行结果
      */
-    public abstract String act();
+    public abstract String act(String thinkMsg);
 
     /**
      * 执行单个步骤：思考和行动
@@ -46,10 +46,10 @@ public abstract class ReActAgent extends BaseAgent {
             // 先思考
             ThinkResponse thinkResponse = think();
             if (!thinkResponse.shouldAct) {
-                return "思考完毕，不需要采取任何行动：" + thinkResponse.response;
+                return "思考完毕，不需要采取任何行动：" + thinkResponse.thinkMsg;
             }
             // 再行动
-            return act();
+            return act(thinkResponse.thinkMsg);
         } catch (Exception e) {
             // 记录异常日志
             log.error("执行当前步骤时出错：", e);

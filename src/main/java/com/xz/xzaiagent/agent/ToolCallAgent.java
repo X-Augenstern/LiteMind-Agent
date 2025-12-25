@@ -88,7 +88,7 @@ public class ToolCallAgent extends ReActAgent {
             List<AssistantMessage.ToolCall> toolCallList = assistantMessage.getToolCalls();
             // 输出提示信息
             String res = assistantMessage.getText();
-            log.info(getName() + "在本轮的思考结果为：" + res);
+            log.info("{} 在本轮的思考结果为：{}", getName(), res);
             log.info("{} 挑选了 {} 个工具来使用", getName(), toolCallList.size());
             String toolCallInfo = toolCallList.stream()
                     .map(toolCall -> String.format("工具名: %s, 参数: %s", toolCall.name(), toolCall.arguments()))
@@ -104,7 +104,7 @@ public class ToolCallAgent extends ReActAgent {
                 return new ThinkResponse(false, res);
             } else
                 // 如果需要调用工具，不需要记入助手消息，在 Act 中才会执行工具，执行工具后才会有结果，这个结果里是包含助手消息的
-                return new ThinkResponse(true, null);
+                return new ThinkResponse(true, res);
         } catch (Exception e) {
             log.error("{} 在本轮的思考中遇到意外困难：{}", getName(), e.getMessage());
             // 即使抛出异常了也要告诉 AI 错误信息
@@ -115,9 +115,9 @@ public class ToolCallAgent extends ReActAgent {
     }
 
     @Override
-    public String act() {
+    public String act(String thinkMsg) {
         if (!this.toolCallChatResponse.hasToolCalls())
-            return "无需调用工具。";
+            return thinkMsg + "无需调用工具。";
 
         // 调用工具
         Prompt prompt = new Prompt(getMessageList(), this.getChatOptions());
@@ -136,7 +136,7 @@ public class ToolCallAgent extends ReActAgent {
         // 判断是否调用了终止工具
         handleSpecialTool(toolResponseMessage);
 
-        return res;
+        return thinkMsg + "\n" + res;
     }
 
     private void handleSpecialTool(ToolResponseMessage tMsg) {
