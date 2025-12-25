@@ -177,7 +177,9 @@ public abstract class BaseAgent {
 
                     // 输出当前每一步的结果到 SSE，推送给客户端
                     if (StrUtil.isNotBlank(res)) {
-                        safeSend(sseEmitter, currentStep > 1 ? "\n" : "" + "【步骤" + currentStep + "】" + res);
+                        // 三元表达式优先级 < 字符串拼接的优先级
+                        // 运行时在 currentStep > 1 时只会返回 "\n"，safeSend 会把只含空白/换行的消息视为空并忽略，导致只有第1步的内容被下发，后续步骤被丢弃
+                        safeSend(sseEmitter, (currentStep > 1 ? "\n" : "") + "【步骤" + currentStep + "】" + res);
                     }
                 }
 
