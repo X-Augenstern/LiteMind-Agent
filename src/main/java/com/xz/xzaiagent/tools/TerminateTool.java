@@ -1,19 +1,33 @@
 package com.xz.xzaiagent.tools;
 
-import com.xz.xzaiagent.agent.LiteMind;
-import com.xz.xzaiagent.agent.model.AgentState;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
+import com.xz.xzaiagent.agent.ActiveAgentRegistry;
+import jakarta.annotation.Resource;
 
 /**
  * 终止工具类，用于让自主规划智能体能够合理地中断
  */
+@Slf4j
 public class TerminateTool {
 
-    @Tool(description = "终止当前交互：当任务完成或无法继续执行任务时，调用此工具以结束工作")
-    public String doTerminate(@ToolParam(description = "当前智能体本身") LiteMind agent) {
-        agent.setState(AgentState.FINISHED);
-        return "交互已完成";
+    @Resource
+    private ActiveAgentRegistry activeAgentRegistry;
+
+    @Tool(description = "终止当前交互：传入 chatId 以结束对应的智能体会话")
+    public String doTerminate(@ToolParam(description = "要终止的 chatId（32 hex）") String chatId) {
+        if (chatId == null || chatId.isEmpty()) {
+            return "终止失败，对话Id为空！";
+        }
+        boolean ok;
+        try {
+            ok = activeAgentRegistry.terminate(chatId, true);
+        } catch (Exception e) {
+            log.error("终止工具出错：{}", e.getMessage());
+            return "终止失败！";
+        }
+        return ok ? "终止完成！" : "终止失败：找不到对话Id！";
     }
 }
 
