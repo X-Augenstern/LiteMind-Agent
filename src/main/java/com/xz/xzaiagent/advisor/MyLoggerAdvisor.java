@@ -26,13 +26,13 @@ public class MyLoggerAdvisor implements CallAroundAdvisor, StreamAroundAdvisor {
     }
 
     private AdvisedRequest before(AdvisedRequest request) {
-        log.info("AI Request: {}", request.userText());
+        log.info("AI 请求: {}", request.userText());
         return request;
     }
 
     private void observeAfter(AdvisedResponse advisedResponse) {
         // AdvisedResponse -> ChatResponse -> Generation -> AssistantMessage -> String
-        log.info("AI Response: {}", advisedResponse.response().getResult().getOutput().getText());
+        log.info("AI 响应: {}", advisedResponse.response().getResult().getOutput().getText());
     }
 
     public AdvisedResponse aroundCall(AdvisedRequest advisedRequest, CallAroundAdvisorChain chain) {

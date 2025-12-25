@@ -48,7 +48,7 @@ public class LiteMind extends ToolCallAgent {
                 this.activeAgentRegistry.register(this.requestedChatId, this, emitter, null);
             } catch (Exception e) {
                 // ignore registration errors but log
-                log.warn("针对此 chatId，智能体向 ActiveAgentRegistry 注册失败 {}", this.requestedChatId, e);
+                log.warn("针对 chatId：{}，智能体向 ActiveAgentRegistry 注册失败", this.requestedChatId, e);
             }
         }
         return emitter;
