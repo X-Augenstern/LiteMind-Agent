@@ -179,14 +179,14 @@ public abstract class BaseAgent {
                     if (StrUtil.isNotBlank(res)) {
                         // 三元表达式优先级 < 字符串拼接的优先级
                         // 运行时在 currentStep > 1 时只会返回 "\n"，safeSend 会把只含空白/换行的消息视为空并忽略，导致只有第1步的内容被下发，后续步骤被丢弃
-                        safeSend(sseEmitter, (currentStep > 1 ? "\n" : "") + "【步骤" + currentStep + "】" + res);
+                        safeSend(sseEmitter, "【步骤" + currentStep + "】" + res);
                     }
                 }
 
                 if (currentStep >= maxSteps) {
                     currentStep = 0;
                     this.state = AgentState.IDLE;
-                    safeSend(sseEmitter, "已达到最大执行步骤（" + maxSteps + "），任务已终止");
+                    safeSend(sseEmitter, "已达到最大执行步骤 (" + maxSteps + ")，任务已终止！");
                 }
                 // 正常完成
                 sseEmitter.complete();
@@ -241,7 +241,16 @@ public abstract class BaseAgent {
                 }
             }
         }
-        emitter.send(message);
+        try {
+            String finalMsg = normalizeMessage(message);
+            if (finalMsg == null || finalMsg.isEmpty()) {
+                return;
+            }
+            emitter.send(finalMsg);
+        } catch (Exception e) {
+            log.warn("safeSend 调用 normalizeMessage 失败，回退直接发送：{}", e.getMessage());
+            emitter.send(message);
+        }
     }
 
     /**
@@ -285,5 +294,43 @@ public abstract class BaseAgent {
      * 清理资源
      */
     protected void cleanUp() {
+    }
+
+    /**
+     * 规范化消息输出：合并多重空行为单个空行，去除行首尾空白，保留段落分隔。
+     * 用于在更上游处清理 LLM / 工具 返回的文本，减少下游产生空的 SSE data 事件的概率。
+     */
+    protected String normalizeMessage(String raw) {
+        if (raw == null) return "";
+
+        StringBuilder sb = new StringBuilder();
+
+        // 统一换行符：将Windows换行（\r\n）替换为Unix换行（\n），消除系统差异
+        String normalized = raw.replace("\r\n", "\n");
+        // 按换行分割所有行（关键：-1参数保留末尾空行，避免丢失信息）
+        String[] lines = normalized.split("\n", -1);
+        // 标记上一行是否是空白行（用于控制连续空行）
+        boolean lastWasBlank = false;
+        for (String line : lines) {
+            // 跳过null行（防御性处理）
+            if (line == null) continue;
+            String trimmed = line.trim();
+            if (trimmed.isEmpty()) {
+                // 规则：仅当“上一行不是空白行”且“结果已有内容”时，才保留一个空行（避免开头/连续空行）
+                if (!lastWasBlank && !sb.isEmpty()) {
+                    // 保留单个空行作为段落分隔
+                    sb.append("\n");
+                    lastWasBlank = true;
+                }
+            } else {
+                // 规则：如果结果已有内容，且上一行不是空白行，先加换行（避免内容粘连）
+                if (!sb.isEmpty() && !lastWasBlank) {
+                    sb.append("\n");
+                }
+                sb.append(trimmed);
+                lastWasBlank = false;
+            }
+        }
+        return sb.toString().trim();
     }
 }

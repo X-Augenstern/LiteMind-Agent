@@ -45,11 +45,14 @@ public abstract class ReActAgent extends BaseAgent {
         try {
             // 先思考
             ThinkResponse thinkResponse = think();
+            String thinkMsg = thinkResponse.thinkMsg;
+            thinkMsg = normalizeMessage(thinkMsg);
             if (!thinkResponse.shouldAct) {
-                return "思考完毕，不需要采取任何行动：" + thinkResponse.thinkMsg;
+                return normalizeMessage("思考完毕，不需要采取任何行动：" + (thinkMsg == null ? "" : thinkMsg));
             }
             // 再行动
-            return act(thinkResponse.thinkMsg);
+            String actRes = act(thinkMsg);
+            return normalizeMessage(actRes);
         } catch (Exception e) {
             // 记录异常日志
             log.error("执行当前步骤时出错：", e);

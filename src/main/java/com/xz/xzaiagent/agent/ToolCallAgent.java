@@ -95,6 +95,8 @@ public class ToolCallAgent extends ReActAgent {
             List<AssistantMessage.ToolCall> toolCallList = assistantMessage.getToolCalls();
             // 输出提示信息
             String res = assistantMessage.getText();
+            // 规范化返回文本，移除多余空行并 trim
+            res = normalizeMessage(res);
             log.info("{} 在本轮的思考结果为：{}", getName(), res);
             log.info("{} 挑选了 {} 个工具来使用", getName(), toolCallList.size());
             String toolCallInfo = toolCallList.stream()
@@ -141,12 +143,15 @@ public class ToolCallAgent extends ReActAgent {
                     return String.format("工具 %s 已执行，结果摘要：\n%s", response.name(), formatted);
                 })
                 .collect(Collectors.joining("\n\n"));
+        // 规范化工具输出，合并空行
+        res = normalizeMessage(res);
         log.info(res);
 
         // 判断是否调用了终止工具
         handleSpecialTool(toolResponseMessage);
 
-        return thinkMsg + "\n" + res;
+        String combined = (thinkMsg == null ? "" : thinkMsg) + "\n" + res;
+        return normalizeMessage(combined);
     }
 
     /**
