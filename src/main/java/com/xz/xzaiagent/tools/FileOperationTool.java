@@ -2,12 +2,14 @@ package com.xz.xzaiagent.tools;
 
 import cn.hutool.core.io.FileUtil;
 import com.xz.xzaiagent.constant.FileConstant;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 
 /**
  * 文件操作工具类（提供文件读写功能）
  */
+@Slf4j
 public class FileOperationTool {
 
     private final String FILE_DIR = FileConstant.FILE_SAVE_DIR + "/file";
@@ -18,7 +20,8 @@ public class FileOperationTool {
         try {
             return FileUtil.readUtf8String(filePath);
         } catch (Exception e) {
-            return "读取文件出错：" + e.getMessage();
+            log.error("读取文件出错：{}", e.getMessage());
+            return "文件操作工具：读取文件出错！";
         }
     }
 
@@ -32,7 +35,8 @@ public class FileOperationTool {
             FileUtil.writeUtf8String(content, filePath);
             return "文件已成功保存：" + filePath;
         } catch (Exception e) {
-            return "写入文件出错：" + e.getMessage();
+            log.error("写入文件出错：{}", e.getMessage());
+            return "文件操作工具：写入文件出错！";
         }
     }
 }

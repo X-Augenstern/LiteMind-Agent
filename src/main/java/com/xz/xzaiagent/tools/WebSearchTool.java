@@ -4,6 +4,7 @@ import cn.hutool.http.HttpUtil;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 
@@ -15,6 +16,7 @@ import java.util.stream.Collectors;
 /**
  * 联网搜索工具类
  */
+@Slf4j
 public class WebSearchTool {
 
     // SearchAPI 的搜索接口地址
@@ -40,13 +42,13 @@ public class WebSearchTool {
             JSONArray organicResults = jsonObject.getJSONArray("organic_results");
             List<Object> objects = organicResults.subList(0, Math.min(organicResults.size(), 5));
             // 拼接搜索结果为字符串
-            String res = objects.stream().map(obj -> {
+            return objects.stream().map(obj -> {
                 JSONObject tmpJSONObject = (JSONObject) obj;
                 return tmpJSONObject.toString();
             }).collect(Collectors.joining(","));
-            return res;
         } catch (Exception e) {
-            return "使用百度检索失败：" + e.getMessage();
+            log.error("使用百度检索失败：{}", e.getMessage());
+            return "联网搜索工具：使用百度检索失败！";
         }
     }
 }

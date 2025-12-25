@@ -1,5 +1,6 @@
 package com.xz.xzaiagent.tools;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 
@@ -10,6 +11,7 @@ import java.io.InputStreamReader;
 /**
  * 终端操作工具类
  */
+@Slf4j
 public class TerminalOperationTool {
 
     @Tool(name = "终端操作", description = "在宿主机终端执行命令（请注意权限与安全）")
@@ -32,7 +34,8 @@ public class TerminalOperationTool {
             if (exitCode != 0)
                 sb.append("命令执行失败，退出码：").append(exitCode);
         } catch (IOException | InterruptedException e) {
-            sb.append("执行命令时出错：").append(e.getMessage());
+            log.error("执行命令时出错：{}", e.getMessage());
+            sb.append("终端操作工具：执行命令时出错！");
         }
         return sb.toString();
     }

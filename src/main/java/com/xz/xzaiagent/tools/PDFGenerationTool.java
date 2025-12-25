@@ -8,12 +8,14 @@ import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.element.Paragraph;
 import com.xz.xzaiagent.constant.FileConstant;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 
 /**
  * PDF 生成工具类
  */
+@Slf4j
 public class PDFGenerationTool {
 
     @Tool(name = "PDF 生成", description = "根据内容生成 PDF 文件并保存")
@@ -47,7 +49,8 @@ public class PDFGenerationTool {
             }
             return "PDF 已生成并保存：" + filePath;
         } catch (Exception e) {
-            return "生成 PDF 失败：" + e.getMessage();
+            log.error("生成 PDF 失败：{}", e.getMessage());
+            return "PDF 生成工具：生成 PDF 失败！";
         }
     }
 }

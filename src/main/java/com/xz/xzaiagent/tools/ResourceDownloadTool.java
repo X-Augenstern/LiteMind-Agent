@@ -3,6 +3,7 @@ package com.xz.xzaiagent.tools;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.http.HttpUtil;
 import com.xz.xzaiagent.constant.FileConstant;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 
@@ -11,6 +12,7 @@ import java.io.File;
 /**
  * 资源下载工具类
  */
+@Slf4j
 public class ResourceDownloadTool {
 
     @Tool(name = "资源下载", description = "从指定 URL 下载资源并保存为文件")
@@ -23,7 +25,8 @@ public class ResourceDownloadTool {
             HttpUtil.downloadFile(url, new File(filePath));
             return "资源已下载并保存：" + filePath;
         } catch (Exception e) {
-            return "下载资源失败：" + e.getMessage();
+            log.error("下载资源失败：{}", e.getMessage());
+            return "资源下载工具：下载资源失败！";
         }
     }
 }
