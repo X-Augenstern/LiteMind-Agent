@@ -1,5 +1,6 @@
 package com.xz.xzaiagent.agent;
 
+import com.xz.xzaiagent.utils.TextUtil;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
@@ -46,13 +47,13 @@ public abstract class ReActAgent extends BaseAgent {
             // 先思考
             ThinkResponse thinkResponse = think();
             String thinkMsg = thinkResponse.thinkMsg;
-            thinkMsg = normalizeMessage(thinkMsg);
+            thinkMsg = TextUtil.normalizeMessage(thinkMsg);
             if (!thinkResponse.shouldAct) {
-                return normalizeMessage("思考完毕，不需要采取任何行动：" + (thinkMsg == null ? "" : thinkMsg));
+                return TextUtil.normalizeMessage("思考完毕，不需要采取任何行动：" + thinkMsg);
             }
             // 再行动
             String actRes = act(thinkMsg);
-            return normalizeMessage(actRes);
+            return TextUtil.normalizeMessage(actRes);
         } catch (Exception e) {
             // 记录异常日志
             log.error("执行当前步骤时出错：", e);

@@ -2,6 +2,7 @@ package com.xz.xzaiagent.agent;
 
 import cn.hutool.core.util.StrUtil;
 import com.xz.xzaiagent.agent.model.AgentState;
+import com.xz.xzaiagent.utils.TextUtil;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -242,8 +243,8 @@ public abstract class BaseAgent {
             }
         }
         try {
-            String finalMsg = normalizeMessage(message);
-            if (finalMsg == null || finalMsg.isEmpty()) {
+            String finalMsg = TextUtil.normalizeMessage(message);
+            if (finalMsg.isEmpty()) {
                 return;
             }
             emitter.send(finalMsg);
@@ -294,43 +295,5 @@ public abstract class BaseAgent {
      * 清理资源
      */
     protected void cleanUp() {
-    }
-
-    /**
-     * 规范化消息输出：合并多重空行为单个空行，去除行首尾空白，保留段落分隔。
-     * 用于在更上游处清理 LLM / 工具 返回的文本，减少下游产生空的 SSE data 事件的概率。
-     */
-    protected String normalizeMessage(String raw) {
-        if (raw == null) return "";
-
-        StringBuilder sb = new StringBuilder();
-
-        // 统一换行符：将Windows换行（\r\n）替换为Unix换行（\n），消除系统差异
-        String normalized = raw.replace("\r\n", "\n");
-        // 按换行分割所有行（关键：-1参数保留末尾空行，避免丢失信息）
-        String[] lines = normalized.split("\n", -1);
-        // 标记上一行是否是空白行（用于控制连续空行）
-        boolean lastWasBlank = false;
-        for (String line : lines) {
-            // 跳过null行（防御性处理）
-            if (line == null) continue;
-            String trimmed = line.trim();
-            if (trimmed.isEmpty()) {
-                // 规则：仅当“上一行不是空白行”且“结果已有内容”时，才保留一个空行（避免开头/连续空行）
-                if (!lastWasBlank && !sb.isEmpty()) {
-                    // 保留单个空行作为段落分隔
-                    sb.append("\n");
-                    lastWasBlank = true;
-                }
-            } else {
-                // 规则：如果结果已有内容，且上一行不是空白行，先加换行（避免内容粘连）
-                if (!sb.isEmpty() && !lastWasBlank) {
-                    sb.append("\n");
-                }
-                sb.append(trimmed);
-                lastWasBlank = false;
-            }
-        }
-        return sb.toString().trim();
     }
 }

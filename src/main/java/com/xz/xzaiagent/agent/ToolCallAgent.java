@@ -4,6 +4,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
 import com.xz.xzaiagent.agent.model.AgentState;
+import com.xz.xzaiagent.utils.TextUtil;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
@@ -96,7 +97,7 @@ public class ToolCallAgent extends ReActAgent {
             // 输出提示信息
             String res = assistantMessage.getText();
             // 规范化返回文本，移除多余空行并 trim
-            res = normalizeMessage(res);
+            res = TextUtil.normalizeMessage(res);
             log.info("{} 在本轮的思考结果为：{}", getName(), res);
             log.info("{} 挑选了 {} 个工具来使用", getName(), toolCallList.size());
             String toolCallInfo = toolCallList.stream()
@@ -144,14 +145,14 @@ public class ToolCallAgent extends ReActAgent {
                 })
                 .collect(Collectors.joining("\n\n"));
         // 规范化工具输出，合并空行
-        res = normalizeMessage(res);
+        res = TextUtil.normalizeMessage(res);
         log.info(res);
 
         // 判断是否调用了终止工具
         handleSpecialTool(toolResponseMessage);
 
         String combined = (thinkMsg == null ? "" : thinkMsg) + "\n" + res;
-        return normalizeMessage(combined);
+        return TextUtil.normalizeMessage(combined);
     }
 
     /**

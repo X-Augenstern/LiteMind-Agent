@@ -3,12 +3,15 @@ package com.xz.xzaiagent.app;
 import com.xz.xzaiagent.advisor.MyLoggerAdvisor;
 import com.xz.xzaiagent.agent.ActiveAgentRegistry;
 import com.xz.xzaiagent.chatmemory.InFileChatMemory;
+import com.xz.xzaiagent.utils.TextUtil;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
@@ -34,12 +37,15 @@ public class SimpleChat {
     @Resource
     private ActiveAgentRegistry activeAgentRegistry;
 
+    @Value("${app.chat.memory.retrieveSize:20}")
+    private int chatMemoryRetrieveSize;
+
     /**
      * 初始化简单对话客户端
      */
-    public SimpleChat(ChatModel dashscopeChatModel) {
-        // 初始化基于文件的对话记忆
-        String fileDir = System.getProperty("user.dir") + "/tmp/chat-memory";
+    public SimpleChat(ChatModel dashscopeChatModel, Environment env) {
+        // 初始化基于文件的对话记忆（从配置读取）
+        String fileDir = env.getProperty("app.chat.memory.path", System.getProperty("user.dir") + "/tmp/chat-memory");
         ChatMemory chatMemory = new InFileChatMemory(fileDir);
 
         chatClient = ChatClient.builder(dashscopeChatModel)
@@ -60,6 +66,8 @@ public class SimpleChat {
      */
     public SseEmitter doChatByStream(String message, String chatId) {
         SseEmitter sseEmitter = new SseEmitter(180000L); // 3分钟超时
+        // 可配置的检索大小，用于 advisor 检索历史消息
+        int retrieveSize = this.chatMemoryRetrieveSize > 0 ? this.chatMemoryRetrieveSize : 20;
 
         // 使用异步处理，避免阻塞主线程
         CompletableFuture.runAsync(() -> {
@@ -69,7 +77,7 @@ public class SimpleChat {
                         .prompt()
                         .user(message)
                         .advisors(spec -> spec.param(CHAT_MEMORY_CONVERSATION_ID_KEY, chatId)
-                                .param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, 10))
+                                .param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, retrieveSize))
                         .stream()
                         .content();
 
@@ -78,7 +86,7 @@ public class SimpleChat {
                         chunk -> {
                             try {
                                 if (chunk != null && !chunk.isEmpty()) {
-                                    sseEmitter.send(chunk);
+                                    sseEmitter.send(TextUtil.normalizeMessage(chunk));
                                 }
                             } catch (IOException e) {
                                 log.error("发送SSE消息失败", e);
